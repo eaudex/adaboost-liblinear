@@ -1,0 +1,13 @@
+AdaBoost-LIBLINEAR
+==================
+`Adaboost.c` is an implementation of AdaBoost with various linear models,
+which are supported in LIBLINAER-1.94, as base learners.
+
+The code is modified from `liblinear-weights-1.94`, which is available at
+http://www.csie.ntu.edu.tw/~cjlin/libsvmtools/#weights_for_data_instances
+.
+
+TODO List
+=========
+- support cross validation
+- improve early stopping
