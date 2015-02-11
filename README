@@ -9,4 +9,9 @@ http://www.csie.ntu.edu.tw/~cjlin/libsvmtools/#weights_for_data_instances
 
 TODO List
 =========
+- save_model
+- modulize read_problem(): encapsulate x_space[]
+- adaboost-predict
+- bagging
+- tree model: tree.h tree.cpp
 - improve early stopping
