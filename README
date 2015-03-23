@@ -8,7 +8,7 @@ The package includes:
 
 
 AdaBoost-Stump
--------------------------------------------------------------------------------------------------------
+----------------------------------------------------------------------------------------
 $ ./train-adaboost-stump 
 Usage: train [options] train_file_name [model_file_name]
 options:
@@ -23,7 +23,7 @@ Usage: predict-adaboost-stump [options] test_file model_file output_file
 
 
 AdaBoost-Linear
----------------------------------------------------------------------------------------------
+----------------------------------------------------------------------------------------
 $ ./train-adaboost-linear
 Usage: train-adaboost-linear [options] training_set_file [model_file]
 options: (currently, it only supports binary classification)
@@ -70,12 +70,8 @@ Usage: predict-adaboost-linear [options] test_file model_file output_file
 
 Note:
 - The final model is saved in the folder named [model_file] with the following structure:
-- folder [model_file]
-	-- file alpha: weights of linear base learners
-	-- file [zero-based index]: linear base model (outputted by save_model(.) in LIBLINEAR)
-
-
-
-
-
+	= Folder [model_file]
+		-- File alpha: weights of linear base learners
+		-- File [zero-based index]: linear base model
+			(outputted by save_model(.) in LIBLINEAR)
 
