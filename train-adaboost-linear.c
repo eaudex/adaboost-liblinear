@@ -1,12 +1,13 @@
 #include <stdio.h>
-#include <float.h>
 #include <math.h>
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
 #include <errno.h>
+#include <sys/stat.h>
+#include "util.h"
 #include "linear.h"
-#define Malloc(type,n) (type *)malloc((n)*sizeof(type))
+#include "adaboost-linear.h"
 #define INF HUGE_VAL
 
 void print_null(const char *s) {}
@@ -14,8 +15,9 @@ void print_null(const char *s) {}
 void exit_with_help()
 {
 	printf(
-	"Usage: adaboost [options] training_set_file [model_file]\n"
-	"options:\n"
+	"Usage: train-adaboost-linear [options] training_set_file [model_file]\n"
+	"options: (currently, it only supports binary classification)\n"
+	"-i iter: maximum number of iterations (default sqrt(l)), where l denotes #training instances\n"
 	"-s type : set type of solver (default 1)\n"
 	"  for multi-class classification\n"
 	"	 0 -- L2-regularized logistic regression (primal)\n"
@@ -85,17 +87,16 @@ static char* readline(FILE *input)
 
 void parse_command_line(int argc, char **argv, char *input_file_name, char *model_file_name);
 void read_problem(const char *filename);
-double do_cross_validation();
-double model_selection();
-void linear_aggregation(struct model*, double, struct model*);
+void do_cross_validation();
 
+struct adaboost_linear_parameter adaparam;
 struct feature_node *x_space;
 struct parameter param;
 struct problem prob;
 struct model* model_;
 char *weight_file;
 int flag_cross_validation;
-int nr_fold = 2;
+int nr_fold;
 double bias;
 
 int main(int argc, char **argv)
@@ -105,91 +106,47 @@ int main(int argc, char **argv)
 	const char *error_msg;
 
 	parse_command_line(argc, argv, input_file_name, model_file_name);
+	print_adaboost_linear_parameter(&adaparam);
 	read_problem(input_file_name);
-	error_msg = check_parameter(&prob,&param);
 
+	error_msg = check_parameter(&prob,&param);
 	if(error_msg)
 	{
 		fprintf(stderr,"ERROR: %s\n",error_msg);
 		exit(1);
 	}
 
-	int iter, i, j;
-	int num_random_guess = 0;
-	struct model* weak_model;
-	double error_rate, alpha;
-	bool* corrects = Malloc(bool, prob.l);
-	for (iter=0; iter<sqrt(prob.l); ++iter) {
-		// train weak learner
-		model_selection();
-		weak_model = train(&prob, &param);
-
-		// estimate training error
-		error_rate = 0.0;
-		for (i=0; i<prob.l; ++i) {
-			double pred_label = predict(weak_model, prob.x[i]);
-			corrects[i] = true;
-			if (pred_label != prob.y[i]) {
-				corrects[i] = false;
-				error_rate += prob.W[i];
-			}
-		}
-
-		// early stopping
-		if (error_rate < 0.5)
-			num_random_guess = 0;
-		else {
-			num_random_guess += 1;
-			if (num_random_guess >= 2) {
-				fprintf(stderr, "Early stopping.\n");
-				break;
-			}
-		}
-
-		// rescale instance weights
-		double s = sqrt((1.0-error_rate)/error_rate);
-		double z = 0.0;
-		for (i=0; i<prob.l; ++i) {
-			if (corrects[i])
-				prob.W[i] /= s;
-			else
-				prob.W[i] *= s;
-			z += prob.W[i];
-		}
-		for (i=0; i<prob.l; ++i)
-			prob.W[i] /= z;
-
-		// aggregate weak learner
-		alpha = log(s);
-		if (iter <= 0) {
-			model_ = weak_model;
-			int w_size = model_->nr_feature + (model_->bias>=0)?(1):(0);
-			for (j=0; j<w_size; ++j)
-				model_->w[j] *= alpha;
-		}
-		else {
-			linear_aggregation(model_, alpha, weak_model);
-			free_and_destroy_model(&weak_model);
-		}
-
-		double accuracy = 0.0;
-		for (i=0; i<prob.l; ++i) {
-			double pred_label = predict(model_, prob.x[i]);
-			if (pred_label == prob.y[i])
-				accuracy += 1.0;
-		}
-		accuracy /= prob.l;
-
-		fprintf(stderr, "[%d] C %.8lf error_rate %.8lf alpha %.8lf accuracy %.8lf\n", iter, param.C ,error_rate, alpha, accuracy);
-	}
-
-	if(save_model(model_file_name, model_))
+	error_msg = check_adaboost_linear_input(&prob,&adaparam);
+	if(error_msg)
 	{
-		fprintf(stderr,"can't save model to file %s\n",model_file_name);
+		fprintf(stderr,"ERROR: %s\n",error_msg);
 		exit(1);
 	}
-	free_and_destroy_model(&model_);
 
+	if(flag_cross_validation)
+	{
+		//do_cross_validation();
+	}
+	else
+	{
+		double* alpha_bag = NULL;
+		struct model** linear_bag = NULL;
+		int bag_size = 0;
+		train_adaboost_linear(&prob, &adaparam, &alpha_bag, &linear_bag, &bag_size);
+
+		// save models
+		if (save_bag_linears(model_file_name,alpha_bag,linear_bag,bag_size))
+		{
+			fprintf(stderr, "can't save model to file %s\n", model_file_name);
+			exit(1);
+		}
+		// free models
+		int i;
+		for (i=0; i<bag_size; ++i)
+			free_and_destroy_model(&linear_bag[i]);
+		free(alpha_bag);
+		free(linear_bag);
+	}
 	destroy_param(&param);
 	free(prob.y);
 	free(prob.x);
@@ -200,40 +157,13 @@ int main(int argc, char **argv)
 	return 0;
 }
 
-void linear_aggregation(struct model* final_model, double alpha, struct model* weak_model) {
-	int j;
-	int w_size = final_model->nr_feature + (final_model->bias>=0)?(1):(0);
-	for (j=0; j<w_size; ++j)
-		final_model->w[j] += alpha*weak_model->w[j];
-}
-
-double model_selection() {
-	int exp_start = 0;
-	int exp_end = 20;
-	double best_C = 0.0;
-	double best_rate = DBL_MAX;
-
-	int p;
-	for (p=exp_start; p<=exp_end; ++p) {
-		param.C = pow(2.0,p);
-		double error_rate = do_cross_validation();
-		if (error_rate < best_rate) {
-			best_C = param.C;
-			best_rate = error_rate;
-		}
-		fprintf(stderr, "C %lf bestC %lf bestRate %lf\n", param.C,best_C,best_rate);
-	}
-	param.C = best_C;
-	return best_C;
-}
-
-double do_cross_validation()
+void do_cross_validation()
 {
 	int i;
+	int total_correct = 0;
 	double total_error = 0;
 	double sumv = 0, sumy = 0, sumvv = 0, sumyy = 0, sumvy = 0;
 	double *target = Malloc(double, prob.l);
-	double cv_error_rate;
 
 	cross_validation(&prob,&param,nr_fold,target);
 	if(param.solver_type == L2R_L2LOSS_SVR ||
@@ -256,25 +186,25 @@ double do_cross_validation()
 				((prob.l*sumvy-sumv*sumy)*(prob.l*sumvy-sumv*sumy))/
 				((prob.l*sumvv-sumv*sumv)*(prob.l*sumyy-sumy*sumy))
 			  );
-		cv_error_rate = total_error/prob.l;
 	}
 	else
 	{
 		for(i=0;i<prob.l;i++)
-			if(target[i] != prob.y[i])
-				total_error += 1.0;
-		cv_error_rate = total_error/prob.l;
+			if(target[i] == prob.y[i])
+				++total_correct;
+		printf("Cross Validation Accuracy = %g%%\n",100.0*total_correct/prob.l);
 	}
 
 	free(target);
-	return cv_error_rate;
 }
-
 
 void parse_command_line(int argc, char **argv, char *input_file_name, char *model_file_name)
 {
 	int i;
 	void (*print_func)(const char*) = NULL;	// default printing to stdout
+
+	adaparam.max_iter = INT_MAX;
+	adaparam.linear_param = &param;
 
 	// default values
 	param.solver_type = L2R_L2LOSS_SVC_DUAL;
@@ -343,6 +273,10 @@ void parse_command_line(int argc, char **argv, char *input_file_name, char *mode
 				weight_file = argv[i];
 				break;
 
+			case 'i':
+				adaparam.max_iter = atoi(argv[i]);
+				break;
+
 			default:
 				fprintf(stderr,"unknown option: -%c\n", argv[i-1][1]);
 				exit_with_help();
@@ -367,7 +301,15 @@ void parse_command_line(int argc, char **argv, char *input_file_name, char *mode
 			p = argv[i];
 		else
 			++p;
-		sprintf(model_file_name,"%s.model",p);
+		sprintf(model_file_name,"%s.adamodel",p);
+	}
+
+	// check if model file exists
+	struct stat s = {0};
+	if (stat(model_file_name,&s) == 0) {
+		fprintf(stderr, "Model file exists: %s\n", model_file_name);
+		fprintf(stderr, "Please rename [model_file_name]\n");
+		exit(1);
 	}
 
 	if(param.eps == INF)
@@ -514,3 +456,4 @@ void read_problem(const char *filename)
 			prob.W[i] = 1.0/prob.l;
 	}
 }
+

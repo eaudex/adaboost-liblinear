@@ -6,7 +6,7 @@ SHVER = 1
 OS = $(shell uname)
 #LIBS = -lblas
 
-all: train predict adaboost
+all: train predict train-adaboost-linear predict-adaboost-linear train-adaboost-stump predict-adaboost-stump
 
 lib: linear.o tron.o blas/blas.a
 	if [ "$(OS)" = "Darwin" ]; then \
@@ -19,8 +19,15 @@ lib: linear.o tron.o blas/blas.a
 train: tron.o linear.o train.c blas/blas.a
 	$(CXX) $(CFLAGS) -o train train.c tron.o linear.o $(LIBS)
 
-adaboost: tron.o linear.o adaboost.c blas/blas.a
-	$(CXX) $(CFLAGS) -o adaboost adaboost.c tron.o linear.o $(LIBS)
+train-adaboost-linear: tron.o linear.o train-adaboost-linear.c blas/blas.a
+	$(CXX) $(CFLAGS) -o train-adaboost-linear train-adaboost-linear.c tron.o linear.o $(LIBS)
+predict-adaboost-linear: tron.o linear.o predict-adaboost-linear.c blas/blas.a
+	$(CXX) $(CFLAGS) -o predict-adaboost-linear predict-adaboost-linear.c tron.o linear.o $(LIBS)
+
+train-adaboost-stump: train-adaboost-stump.c
+	$(CXX) $(CFLAGS) -o train-adaboost-stump train-adaboost-stump.c
+predict-adaboost-stump: predict-adaboost-stump.c
+	$(CXX) $(CFLAGS) -o predict-adaboost-stump predict-adaboost-stump.c
 
 predict: tron.o linear.o predict.c blas/blas.a
 	$(CXX) $(CFLAGS) -o predict predict.c tron.o linear.o $(LIBS)
@@ -36,5 +43,5 @@ blas/blas.a: blas/*.c blas/*.h
 
 clean:
 	make -C blas clean
-	make -C matlab clean
-	rm -f *~ tron.o linear.o train adaboost predict liblinear.so.$(SHVER)
+	rm -f *~ tron.o linear.o train predict liblinear.so.$(SHVER)
+	rm -f train-adaboost-linear predict-adaboost-linear train-adaboost-stump predict-adaboost-stump

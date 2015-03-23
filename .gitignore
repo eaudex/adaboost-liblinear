@@ -1,1 +1,11 @@
 *~
+*.model
+*.adamodel
+*.o
+*.out
+train
+predict
+train-adaboost-stump
+train-adaboost-linear
+predict-adaboost-stump
+predict-adaboost-linear

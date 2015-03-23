@@ -1,0 +1,10 @@
+TODO LIST
+---------
+X Write train-adaboost-linear code as a function in adaboost-linear.h
+X Implement load-adaboost-linears in adaboost-linear.h
+
+Implement predict-adaboost-linear.c & predict-adaboost-stump.c
+
+Implement cross validation functionality
+Move adaboost-related functions from stump.h to adaboost-stump.h
+
