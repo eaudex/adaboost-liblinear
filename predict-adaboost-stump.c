@@ -8,7 +8,7 @@
 int quiet = 0;
 
 void exit_with_help() {
-	printf("Usage: predict-adaboost-linear [options] test_file model_file output_file\n"
+	printf("Usage: predict-adaboost-stump [options] test_file model_file output_file\n"
 	);
 	exit(1);
 }
