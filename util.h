@@ -19,4 +19,12 @@ void swap(double* x, double* y) {
 }
 */
 
+void permute(int* perm, int len) {
+	int i;
+	for (i=0; i<len; ++i) {
+		int j = i + rand()%(len-i);
+		swap(&perm[i], &perm[j]);
+	}
+}
+
 #endif /* _UTIL_H */

@@ -29,6 +29,14 @@ const char* check_adaboost_linear_input(const struct problem* prob, const struct
 	return NULL;
 }
 
+// TODO
+struct adaboost_linear_model {
+	int bag_size;
+	double* alpha_bag;
+	struct model** model_bag;
+	double* labels;
+};
+
 
 double bag_predict_instance_label(const struct feature_node* x, const double* alpha_bag, struct model* const* linear_bag, int bag_size) {
 	int b;

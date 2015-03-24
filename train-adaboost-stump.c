@@ -18,8 +18,8 @@ void exit_with_help() {
 		"options:\n"
 		"-i iter: maximum number of iterations (default sqrt(l)), where l denotes #training instances\n"
 		"-d dimension: dimensions of random subspace; (default n, deterministic mode), where n denotes #features\n"
-		"-t test_file_name: testing data on the fly\n"
-		"-v n: n-fold cross validation mode (TODO) \n"
+		"-t test_file_name: testing data, while training\n"
+		"-v n: n-fold cross validation mode\n"
 		"-q: quiet mode\n"
 	);
 	exit(1);
@@ -49,7 +49,14 @@ int main(int argc, char** argv) {
 	}
 
 	if (to_cross_validate) {
-		double cv_accuracy = cross_validate();
+		double* pred_labels = Malloc(double, prob_cls.l);
+		cross_validate_adaboost_stump(&prob_cls, &param, num_folds, pred_labels);
+		int i, correct=0;
+		for (i=0; i<prob_cls.l; ++i)
+			if (pred_labels[i] == prob_cls.prob.y[i])
+				correct ++;
+		printf("Cross Validation Accuracy %g%%\n", 100.0*correct/prob_cls.l);
+		free(pred_labels);
 	}
 	else {
 		// train models
