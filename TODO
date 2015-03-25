@@ -3,6 +3,7 @@ TODO LIST
 X Write train-adaboost-linear code as a function in adaboost-linear.h
 X Implement load-adaboost-linears in adaboost-linear.h
 X Implement predict-adaboost-linear.c & predict-adaboost-stump.c
+X Implement cross validation functionality
 
 Write adaboost model wrapper:
 	- bag_size
@@ -10,7 +11,9 @@ Write adaboost model wrapper:
 	- model_bag
 	- class_labels
 
-Implement cross validation functionality
 Support multi-class AdaBoost
+	- One-versus-rest multi-class wrapper of AdaBoost-Stump
+	- Samme: Multi-class AdaBoost (http://web.stanford.edu/~hastie/Papers/samme.pdf)
+
 Move adaboost-related functions from stump.h to adaboost-stump.h
 
