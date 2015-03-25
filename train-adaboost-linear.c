@@ -101,9 +101,9 @@ double bias;
 
 int main(int argc, char **argv)
 {
-	char input_file_name[1024];
-	char model_file_name[1024];
-	const char *error_msg;
+	char input_file_name[1024] = {0};
+	char model_file_name[1024] = {0};
+	const char* error_msg;
 
 	parse_command_line(argc, argv, input_file_name, model_file_name);
 	print_adaboost_linear_parameter(&adaparam);
@@ -129,6 +129,7 @@ int main(int argc, char **argv)
 	}
 	else
 	{
+		// train models
 		double* alpha_bag = NULL;
 		struct model** linear_bag = NULL;
 		int bag_size = 0;
@@ -140,6 +141,7 @@ int main(int argc, char **argv)
 			fprintf(stderr, "can't save model to file %s\n", model_file_name);
 			exit(1);
 		}
+
 		// free models
 		int i;
 		for (i=0; i<bag_size; ++i)
@@ -456,4 +458,3 @@ void read_problem(const char *filename)
 			prob.W[i] = 1.0/prob.l;
 	}
 }
-

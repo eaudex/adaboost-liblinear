@@ -414,8 +414,9 @@ void train_adaboost_stump(const struct problem_class* prob_cls, const struct ada
 		for (i=0; i<prob_col->l; ++i)
 			prob_col->W[i] /= z;
 
-		double train_error = bag_predict_labels0(prob_col,stumps,iter+1,pred_labels);
-		printf("[%d] error %lf score %lf alpha %lf train_error %lf\n", iter,error,score,alpha,train_error);
+		//double train_error = bag_predict_labels0(prob_col,stumps,iter+1,pred_labels);
+		//printf("[%d] error %lf score %lf alpha %lf train_error %lf\n", iter,error,score,alpha,train_error);
+		printf("[%d] error %lf score %lf alpha %lf\n", iter,error,score,alpha);
 		iter ++;
 	}
 	*stump_bag_ret = stumps;

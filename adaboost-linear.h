@@ -107,8 +107,9 @@ void train_adaboost_linear(const struct problem* prob, const struct adaboost_lin
 		for (i=0; i<prob->l; ++i)
 			prob->W[i] /= z;
 
-		double train_error = bag_predict_labels(prob, alpha_bag, model_bag, iter+1, pred_labels);
-		printf("[%d] error %lf score %lf alpha %lf train_error %lf\n", iter,error,score,alpha,train_error);
+		//double train_error = bag_predict_labels(prob, alpha_bag, model_bag, iter+1, pred_labels);
+		//printf("[%d] error %lf score %lf alpha %lf train_error %lf\n", iter,error,score,alpha,train_error);
+		printf("[%d] error %lf score %lf alpha %lf\n", iter,error,score,alpha);
 		iter++;
 	}
 	*alpha_bag_ret = alpha_bag;

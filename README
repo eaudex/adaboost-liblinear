@@ -9,15 +9,25 @@ The package includes:
 
 AdaBoost-Stump
 ----------------------------------------------------------------------------------------
-$ ./train-adaboost-stump 
-Usage: train [options] train_file_name [model_file_name]
-options:
--i iter: maximum number of iterations (default sqrt(l)), where l denotes #training instances
--d dimension: dimensions of random subspace; (default n, deterministic mode), where n denotes #features
--t test_file_name: testing data on the fly
--v n: n-fold cross validation mode (TODO) 
--q: quiet mode
+We implement AdaBoost with decision stump as base learner.
 
+[Training]
+$ ./train-adaboost-stump 
+Usage: train-adaboost-stump [options] train_file_name [model_file_name]
+options: (currently, it only supports binary classification)
+	-i iter: maximum number of iterations (default sqrt(l)), where l denotes #training instances
+	-d dimension: dimensions of random subspace; (default n, deterministic mode), where n denotes #features
+	-t test_file_name: testing data after training
+	-v n: n-fold cross validation mode
+	-q: quiet mode
+
+Note:
+The option `-d followed by an integer` is used to specify the dimensions of random subspace. At each
+training iteration, it only randomly selects d dimentions to train the optimal decision stump as a base
+learner.
+
+
+[Prediction]
 $ ./predict-adaboost-stump 
 Usage: predict-adaboost-stump [options] test_file model_file output_file
 
@@ -70,8 +80,13 @@ Usage: predict-adaboost-linear [options] test_file model_file output_file
 
 Note:
 - The final model is saved in the folder named [model_file] with the following structure:
-	= Folder [model_file]
-		-- File alpha: weights of linear base learners
-		-- File [zero-based index]: linear base model
-			(outputted by save_model(.) in LIBLINEAR)
+= Folder [model_file]
+	-- File alpha: weights of linear base learners
+	-- File [zero-based index]: linear base model
+		(outputted by save_model(.) in LIBLINEAR)
+
+
+Feedback
+----------------------------------------------------------------------------------------
+You can always contact Guo-Xun Yuan <eaudex@gmail.com> with any questions.
 

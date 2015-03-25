@@ -14,11 +14,11 @@ int num_folds = 2;
 int quiet = 0;
 
 void exit_with_help() {
-	printf("Usage: train [options] train_file_name [model_file_name]\n"
-		"options:\n"
+	printf("Usage: train-adaboost-stump [options] train_file_name [model_file_name]\n"
+		"options: (currently, it only supports binary classification)\n"
 		"-i iter: maximum number of iterations (default sqrt(l)), where l denotes #training instances\n"
 		"-d dimension: dimensions of random subspace; (default n, deterministic mode), where n denotes #features\n"
-		"-t test_file_name: testing data, while training\n"
+		"-t test_file_name: testing data after training\n"
 		"-v n: n-fold cross validation mode\n"
 		"-q: quiet mode\n"
 	);
@@ -34,9 +34,9 @@ int main(int argc, char** argv) {
 	char model_file_name[1024] = {0};
 	char test_file_name[1024] = {0};
 	parse_command_line(argc, argv, &param, train_file_name, model_file_name, test_file_name);
-	printf("[train_file] %s\n", train_file_name);
-	printf("[model_file] %s\n", model_file_name);
-	if(to_test==1) printf("[test_file] %s\n", test_file_name);
+	//printf("[train_file] %s\n", train_file_name);
+	//printf("[model_file] %s\n", model_file_name);
+	//if(to_test==1) printf("[test_file] %s\n", test_file_name);
 
 	// read problem in libsvm format
 	struct problem_class prob_cls;
