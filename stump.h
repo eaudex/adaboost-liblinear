@@ -380,8 +380,12 @@ void train_adaboost_stump(const struct problem_class* prob_cls, const struct ada
 	int random_subspace = param->random_subspace;
 	if (max_iter >= INT_MAX)
 		max_iter = (int)sqrt(prob_cls->l);
-	if (random_subspace >= prob_cls->n)
+	if (random_subspace >= INT_MAX)
 		random_subspace = prob_cls->n;
+	else if (random_subspace >= prob_cls->n) {
+		random_subspace = prob_cls->n;
+		fprintf(stderr, "WARNING: dim(random_subspace) >= n. Set dim(random_space) to n instead (i.e. deterministic mode)\n");
+	}
 
 	// transform data to compressed column format
 	struct problem_class prob_cls_col;
