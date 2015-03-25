@@ -22,9 +22,10 @@ options: (currently, it only supports binary classification)
 	-q: quiet mode
 
 Note:
-The option `-d followed by an integer` is used to specify the dimensions of random subspace. At each
-training iteration, it only randomly selects d dimentions to train the optimal decision stump as a base
-learner.
+The option `-d followed by an integer` is used to specify the dimensions of random
+subspace. At each training iteration, it only randomly selects d dimentions to
+train the optimal decision stump as a base learner.
+
 
 
 [Prediction]
