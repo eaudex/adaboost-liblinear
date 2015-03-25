@@ -27,7 +27,7 @@ options: (currently, it only supports binary classification)
 
 Note:
 The option `-d followed by an integer` is used to specify the dimensions of random
-subspace. At each training iteration, it only randomly selects d dimentions to
+subspace. At each training iteration, it only randomly selects d features to
 train the optimal decision stump as a base learner.
 
 [Prediction]
