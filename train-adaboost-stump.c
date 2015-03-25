@@ -49,7 +49,7 @@ int main(int argc, char** argv) {
 	}
 
 	if (to_cross_validate) {
-		double* pred_labels = Malloc(double, prob_cls.l);
+		double* pred_labels = Malloc(double,prob_cls.l);
 		cross_validate_adaboost_stump(&prob_cls, &param, num_folds, pred_labels);
 		int i, correct=0;
 		for (i=0; i<prob_cls.l; ++i)
@@ -70,15 +70,21 @@ int main(int argc, char** argv) {
 			exit(1);
 		}
 
-		// test
+		// training error
+		double* pred_labels = Malloc(double,prob_cls.l);
+		double train_error = bag_predict_labels(&prob_cls.prob,stump_bag,bag_size,pred_labels);
+		printf("train_error %lf\n", train_error);
+		free(pred_labels);
+
+		// test error
 		if (to_test == 1) {
 			struct problem_class test_prob_cls;
 			read_problem_class(test_file_name, &test_prob_cls, -1);
 			print_problem_stats(&test_prob_cls);
-			struct problem* test_prob = &test_prob_cls.prob;
+			//struct problem* test_prob = &test_prob_cls.prob;
 
-			double* pred_labels = Malloc(double,test_prob->l);
-			double test_error = bag_predict_labels(test_prob,stump_bag,bag_size,pred_labels);
+			double* pred_labels = Malloc(double,test_prob_cls.l);
+			double test_error = bag_predict_labels(&test_prob_cls.prob,stump_bag,bag_size,pred_labels);
 			printf("test_error %lf\n", test_error);
 
 			free(pred_labels);

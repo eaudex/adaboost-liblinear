@@ -428,36 +428,37 @@ void train_adaboost_stump(const struct problem_class* prob_cls, const struct ada
 
 
 void cross_validate_adaboost_stump(const struct problem_class* prob_cls, const struct adaboost_stump_parameter* param, int nr_fold, double* target_labels) {
-	if (nr_fold > prob_cls->l) {
-		nr_fold = prob_cls->l;
+	const int l = prob_cls->l;
+	const int n = prob_cls->n;
+	if (nr_fold > l) {
+		nr_fold = l;
 		fprintf(stderr, "WARNING: #folds > #instances. Set #folds to #instances instead (i.e. leave-one-out cross validation)\n");
 	}
 
 	int i;
-	int* perm = Malloc(int, prob_cls->l);
-	for (i=0; i<prob_cls->l; ++i)
-		perm[i] = i;
-	permute(perm, prob_cls->l);
+	int* perm = Malloc(int, l);
+	for(i=0;i<l;++i) perm[i]=i;
+	permute(perm, l);
 
 	int* indices = Malloc(int, nr_fold+1);
 	for (i=0; i<=nr_fold; ++i)
-		indices[i] = i * prob_cls->l / nr_fold;
+		indices[i] = i*l/nr_fold;
 
-	struct problem_class subprob_cls;
 	for (i=0; i<nr_fold; ++i) {
 		int start_index = indices[i];
 		int end_index = indices[i+1];
 		int fold_size = end_index-start_index;
 
 		// construct training sub-problem
-		subprob_cls.l = prob_cls->l - fold_size;
-		subprob_cls.n = prob_cls->n;
+		struct problem_class subprob_cls;
+		subprob_cls.l = l-fold_size;
+		subprob_cls.n = n;
 		// init subprob_cls.prob ...
 		subprob_cls.prob.l = subprob_cls.l;
 		subprob_cls.prob.n = subprob_cls.n;
-		subprob_cls.prob.y = Malloc(double, subprob_cls.l);
-		subprob_cls.prob.x = Malloc(struct feature_node*, subprob_cls.l);
 		subprob_cls.prob.bias = prob_cls->prob.bias;
+		subprob_cls.prob.x = Malloc(struct feature_node*, subprob_cls.l);
+		subprob_cls.prob.y = Malloc(double, subprob_cls.l);
 		subprob_cls.prob.W = Malloc(double, subprob_cls.l);
 		// end of init
 		subprob_cls.space_size = 0;
@@ -465,15 +466,15 @@ void cross_validate_adaboost_stump(const struct problem_class* prob_cls, const s
 
 		int j, k=0;
 		for (j=0; j<start_index; ++j) {
-			subprob_cls.prob.y[k] = prob_cls->prob.y[perm[j]];
 			subprob_cls.prob.x[k] = prob_cls->prob.x[perm[j]];
+			subprob_cls.prob.y[k] = prob_cls->prob.y[perm[j]];
 			subprob_cls.prob.W[k] = prob_cls->prob.W[perm[j]];
 			//printf("y %g x->index %d x->value %g w %g\n", subprob_cls.prob.y[k],subprob_cls.prob.x[k]->index,subprob_cls.prob.x[k]->value,subprob_cls.prob.W[k]);
 			k++;
 		}
-		for (j=end_index; j<prob_cls->l; ++j) {
-			subprob_cls.prob.y[k] = prob_cls->prob.y[perm[j]];
+		for (j=end_index; j<l; ++j) {
 			subprob_cls.prob.x[k] = prob_cls->prob.x[perm[j]];
+			subprob_cls.prob.y[k] = prob_cls->prob.y[perm[j]];
 			subprob_cls.prob.W[k] = prob_cls->prob.W[perm[j]];
 			//printf("y %g x->index %d x->value %g w %g\n", subprob_cls.prob.y[k],subprob_cls.prob.x[k]->index,subprob_cls.prob.x[k]->value,subprob_cls.prob.W[k]);
 			k++;
@@ -485,7 +486,7 @@ void cross_validate_adaboost_stump(const struct problem_class* prob_cls, const s
 		train_adaboost_stump(&subprob_cls, param, &stump_bag, &bag_size);
  
 		// test
-		double test_error = 0;
+		double test_error = 0.0;
 		for (j=start_index; j<end_index; ++j) {
 			target_labels[perm[j]] = bag_predict_instance_label(prob_cls->prob.x[perm[j]], stump_bag, bag_size);
 			if (target_labels[perm[j]] != prob_cls->prob.y[perm[j]])
@@ -495,41 +496,14 @@ void cross_validate_adaboost_stump(const struct problem_class* prob_cls, const s
 		//printf("error %g\n", test_error);
 		printf("[fold-%d] (%d-%d) error %g (%d/%d)\n", i,start_index,end_index, test_error/fold_size, (int)test_error,fold_size);
 
-		/*
-		// construct test sub-problem
-		struct problem test_prob;
-		test_prob.l = fold_size;
-		test_prob.n = prob_cls->n;
-		test_prob.y = Malloc(double, test_prob.l);
-		test_prob.x = Malloc(struct feature_node*, test_prob.l);
-		test_prob.bias = prob_cls->prob.bias;
-		test_prob.W = Malloc(double, test_prob.l);
-
-		k = 0;
-		for (j=start_index; j<end_index; ++j) {
-			test_prob.y[k] = prob_cls->prob.y[perm[j]];
-			test_prob.x[k] = prob_cls->prob.x[perm[j]];
-			test_prob.W[k] = prob_cls->prob.W[perm[j]];
-			k++;
-		}
-
-		double* aggr_labels = Malloc(double, fold_size);
-		double cv_error = bag_predict_labels(&test_prob, stump_bag, bag_size, aggr_labels);
-		for (j=0; j<fold_size; ++j)
-			target_labels[perm[start_index+j]] = aggr_labels[j];
-		free(aggr_labels);
-		printf("%d-th fold cv error %g\n", i,cv_error);
-
-		free(test_prob.y);
-		free(test_prob.x);
-		free(test_prob.W);
-		*/
-
+		// free models
 		for (j=0; j<bag_size; ++j)
 			free(stump_bag[j]);
 		free(stump_bag);
-		free(subprob_cls.prob.y);
+
+		// free training sub-problem
 		free(subprob_cls.prob.x);
+		free(subprob_cls.prob.y);
 		free(subprob_cls.prob.W);
 	}
 	free(indices);

@@ -119,6 +119,83 @@ void train_adaboost_linear(const struct problem* prob, const struct adaboost_lin
 	free(pred_labels);
 }
 
+void cross_validate_adaboost_linear(const struct problem* prob, const struct adaboost_linear_parameter* param, int nr_fold, double* target_labels) {
+	const int l = prob->l;
+	const int n = prob->n;
+	if (nr_fold > l) {
+		nr_fold = l;
+		fprintf(stderr, "WARNING: #folds > #instances. Set #folds to #instances instead (i.e. leave-one-out cross validation)\n");
+	}
+
+	int i;
+	int* perm = Malloc(int, l);
+	for(i=0;i<l;++i) perm[i]=i;
+	permute(perm, l);
+
+	int* indices = Malloc(int, nr_fold+1);
+	for (i=0; i<=nr_fold; ++i)
+		indices[i] = i*l/nr_fold;
+
+	for (i=0; i<nr_fold; ++i) {
+		int start_index = indices[i];
+		int end_index = indices[i+1];
+		int fold_size = end_index-start_index;
+
+		// construct training sub-problem
+		struct problem subprob;
+		subprob.l = l-fold_size;
+		subprob.n = n;
+		subprob.bias = prob->bias;
+		subprob.x = Malloc(struct feature_node*, subprob.l);
+		subprob.y = Malloc(double, subprob.l);
+		subprob.W = Malloc(double, subprob.l);
+
+		int j, k=0;
+		for (j=0; j<start_index; ++j) {
+			subprob.x[k] = prob->x[perm[j]];
+			subprob.y[k] = prob->y[perm[j]];
+			subprob.W[k] = prob->W[perm[j]];
+			//printf("y %g x->index %d x->value %g w %g\n", subprob.y[k],subprob.x[k]->index,subprob.x[k]->value,subprob.W[k]);
+			k++;
+		}
+		for (j=end_index; j<l; ++j) {
+			subprob.x[k] = prob->x[perm[j]];
+			subprob.y[k] = prob->y[perm[j]];
+			subprob.W[k] = prob->W[perm[j]];
+			//printf("y %g x->index %d x->value %g w %g\n", subprob.y[k],subprob.x[k]->index,subprob.x[k]->value,subprob.W[k]);
+			k++;
+		}
+
+		// train
+		int bag_size;
+		double* alpha_bag;
+		struct model** linear_bag;
+		train_adaboost_linear(&subprob, param, &alpha_bag, &linear_bag, &bag_size);
+ 
+		// test
+		double test_error = 0.0;
+		for (j=start_index; j<end_index; ++j) {
+			target_labels[perm[j]] = bag_predict_instance_label(prob->x[perm[j]], alpha_bag, linear_bag, bag_size);
+			if (target_labels[perm[j]] != prob->y[perm[j]])
+				test_error += 1.0;
+		}
+		printf("[fold-%d] (%d-%d) error %g (%d/%d)\n", i,start_index,end_index, test_error/fold_size, (int)test_error,fold_size);
+
+		// free models
+		for (j=0; j<bag_size; ++j)
+			free_and_destroy_model(&linear_bag[j]);
+		free(alpha_bag);
+		free(linear_bag);
+
+		// free training sub-problem
+		free(subprob.x);
+		free(subprob.y);
+		free(subprob.W);
+	}
+	free(indices);
+	free(perm);
+}
+
 int save_alphas(const char* alpha_file_name, const double* alpha_bag, int bag_size) {
 	FILE* fp = fopen(alpha_file_name,"w");
 	if(fp==NULL) return -1;

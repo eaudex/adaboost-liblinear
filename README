@@ -8,7 +8,7 @@ The package includes:
 
 Compilation/Installation
 ----------------------------------------------------------------------------------------
-On UNIX/LINUX/MAC with gcc/g++, type the command `make clean all`.
+On UNIX/LINUX/MAC with gcc/g++, type the command `make all`.
 
 
 AdaBoost-Stump

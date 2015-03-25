@@ -125,7 +125,14 @@ int main(int argc, char **argv)
 
 	if(flag_cross_validation)
 	{
-		//do_cross_validation();
+		double* pred_labels = Malloc(double,prob.l);
+		cross_validate_adaboost_linear(&prob, &adaparam, nr_fold, pred_labels);
+		int i, correct=0;
+		for (i=0; i<prob.l; ++i)
+			if (pred_labels[i] == prob.y[i])
+				correct ++;
+		printf("Cross Validation Accuracy %g%%\n", 100.0*correct/prob.l);
+		free(pred_labels);
 	}
 	else
 	{
