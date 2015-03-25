@@ -6,6 +6,10 @@ The package includes:
   supported in LIBLINAER-1.94, as base learners. It uses `liblinear-weights-1.94`
   which is available at http://www.csie.ntu.edu.tw/~cjlin/libsvmtools/#weights_for_data_instances.
 
+Compilation/Installation
+----------------------------------------------------------------------------------------
+On UNIX/LINUX/MAC with gcc/g++, type the command `make clean all`.
+
 
 AdaBoost-Stump
 ----------------------------------------------------------------------------------------
@@ -26,15 +30,15 @@ The option `-d followed by an integer` is used to specify the dimensions of rand
 subspace. At each training iteration, it only randomly selects d dimentions to
 train the optimal decision stump as a base learner.
 
-
-
 [Prediction]
 $ ./predict-adaboost-stump 
 Usage: predict-adaboost-stump [options] test_file model_file output_file
+(No options are available for now.)
 
 
 AdaBoost-Linear
 ----------------------------------------------------------------------------------------
+[Training]
 $ ./train-adaboost-linear
 Usage: train-adaboost-linear [options] training_set_file [model_file]
 options: (currently, it only supports binary classification)
@@ -76,8 +80,10 @@ options: (currently, it only supports binary classification)
 -q : quiet mode (no outputs)
 -W instace_weight_file: initialize instance weights, (default 1.0/[#training instances])
 
+[Prediction]
 $ ./predict-adaboost-linear 
 Usage: predict-adaboost-linear [options] test_file model_file output_file
+(No options are available for now.)
 
 Note:
 - The final model is saved in the folder named [model_file] with the following structure:
