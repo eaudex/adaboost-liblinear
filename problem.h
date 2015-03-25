@@ -16,7 +16,7 @@ struct problem_class {
 	struct feature_node* x_space;
 };
 void print_problem_stats(const struct problem_class* prob_cls) {
-	printf("[problem] l %d n %d |xspace| %d\n", prob_cls->l, prob_cls->n, prob_cls->space_size);
+	printf("[problem] l %d n %d |xspace| %d bias %g\n", prob_cls->l, prob_cls->n, prob_cls->space_size, prob_cls->prob.bias);
 }
 
 static void exit_input_error(int line_num)
@@ -169,6 +169,7 @@ void transpose_problem(const struct problem* prob, struct feature_node** x_space
 	prob_col->n = n;
 	prob_col->y = Malloc(double,l);	//new double[l];
 	prob_col->x = Malloc(struct feature_node*,n);	//new feature_node*[n];
+	prob_col->bias = prob->bias;
 	prob_col->W = Malloc(double,l);	//new double[l];
 
 	for(i=0; i<l; i++)
