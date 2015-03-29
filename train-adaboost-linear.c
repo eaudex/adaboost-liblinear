@@ -5,8 +5,11 @@
 #include <ctype.h>
 #include <errno.h>
 #include <sys/stat.h>
+#include <limits.h>
+#include <float.h>
 #include "util.h"
 #include "linear.h"
+#include "problem.h"
 #include "adaboost-linear.h"
 #define INF HUGE_VAL
 
@@ -17,7 +20,8 @@ void exit_with_help()
 	printf(
 	"Usage: train-adaboost-linear [options] training_set_file [model_file]\n"
 	"options: (currently, it only supports binary classification)\n"
-	"-i iter: maximum number of iterations (default sqrt(l)), where l denotes #training instances\n"
+	"-i iter: maximum number of AdaBoost iterations (default sqrt(l)), where l denotes #training instances\n"
+	"-r rate: sample rate of training data per AdaBoost iteration in (0.0,1.0] (default no sampling)\n"
 	"-s type : set type of solver (default 1)\n"
 	"  for multi-class classification\n"
 	"	 0 -- L2-regularized logistic regression (primal)\n"
@@ -53,41 +57,15 @@ void exit_with_help()
 	"-wi weight: weights adjust the parameter C of different classes (see README for details)\n"
 	"-v n: n-fold cross validation mode\n"
 	"-q : quiet mode (no outputs)\n"
-	"-W instace_weight_file: initialize instance weights, (default 1.0/[#training instances])\n"
+//	"-W instace_weight_file: initialize instance weights, (default 1.0/[#training instances])\n"
 	);
 	exit(1);
 }
 
-void exit_input_error(int line_num)
-{
-	fprintf(stderr,"Wrong input format at line %d\n", line_num);
-	exit(1);
-}
-
-static char *line = NULL;
-static int max_line_len;
-
-static char* readline(FILE *input)
-{
-	int len;
-
-	if(fgets(line,max_line_len,input) == NULL)
-		return NULL;
-
-	while(strrchr(line,'\n') == NULL)
-	{
-		max_line_len *= 2;
-		line = (char *) realloc(line,max_line_len);
-		len = (int) strlen(line);
-		if(fgets(line+len,max_line_len-len,input) == NULL)
-			break;
-	}
-	return line;
-}
 
 void parse_command_line(int argc, char **argv, char *input_file_name, char *model_file_name);
-void read_problem(const char *filename);
-void do_cross_validation();
+//void read_problem(const char *filename);
+//void do_cross_validation();
 
 struct adaboost_linear_parameter adaparam;
 struct feature_node *x_space;
@@ -107,7 +85,8 @@ int main(int argc, char **argv)
 
 	parse_command_line(argc, argv, input_file_name, model_file_name);
 	print_adaboost_linear_parameter(&adaparam);
-	read_problem(input_file_name);
+	//read_problem(input_file_name);
+	read_problem(input_file_name, &x_space, &prob, bias);
 
 	error_msg = check_parameter(&prob,&param);
 	if(error_msg)
@@ -131,7 +110,8 @@ int main(int argc, char **argv)
 		for (i=0; i<prob.l; ++i)
 			if (pred_labels[i] == prob.y[i])
 				correct ++;
-		printf("Cross Validation Accuracy %g%%\n", 100.0*correct/prob.l);
+		double cv_error = 1.0-(double)correct/prob.l;
+		printf("Cross Validation Error %g\n", cv_error);
 		free(pred_labels);
 	}
 	else
@@ -149,6 +129,12 @@ int main(int argc, char **argv)
 			exit(1);
 		}
 
+		// training error
+		double* pred_labels = Malloc(double,prob.l);
+		double train_error = bag_predict_labels(&prob, alpha_bag, linear_bag, bag_size, pred_labels);
+		printf("Training Error %g\n", train_error);
+		free(pred_labels);
+
 		// free models
 		int i;
 		for (i=0; i<bag_size; ++i)
@@ -157,11 +143,8 @@ int main(int argc, char **argv)
 		free(linear_bag);
 	}
 	destroy_param(&param);
-	free(prob.y);
-	free(prob.x);
-	free(prob.W);
+	destroy_problem(&prob);
 	free(x_space);
-	free(line);
 
 	return 0;
 }
@@ -213,6 +196,7 @@ void parse_command_line(int argc, char **argv, char *input_file_name, char *mode
 	void (*print_func)(const char*) = NULL;	// default printing to stdout
 
 	adaparam.max_iter = INT_MAX;
+	adaparam.sample_rate = DBL_MAX;
 	adaparam.linear_param = &param;
 
 	// default values
@@ -286,6 +270,10 @@ void parse_command_line(int argc, char **argv, char *input_file_name, char *mode
 				adaparam.max_iter = atoi(argv[i]);
 				break;
 
+			case 'r':
+				adaparam.sample_rate = atof(argv[i]);
+				break;
+
 			default:
 				fprintf(stderr,"unknown option: -%c\n", argv[i-1][1]);
 				exit_with_help();
@@ -350,6 +338,7 @@ void parse_command_line(int argc, char **argv, char *input_file_name, char *mode
 	}
 }
 
+/*
 // read in a problem (in libsvm format)
 void read_problem(const char *filename)
 {
@@ -465,3 +454,4 @@ void read_problem(const char *filename)
 			prob.W[i] = 1.0/prob.l;
 	}
 }
+*/

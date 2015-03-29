@@ -1,14 +1,17 @@
 #ifndef _ADABOOST_LINEAR_H
 #define _ADABOOST_LINEAR_H
 #include <stdio.h>
+#include <float.h>
 #include <limits.h>
 #include <math.h>
 #include <sys/stat.h>
-#include "linear.h"
 #include "util.h"
+#include "linear.h"
+#include "problem.h"
 
 struct adaboost_linear_parameter {
 	int max_iter;
+	double sample_rate;
 	struct parameter* linear_param;
 };
 void print_linear_parameter(const struct parameter* param) {
@@ -16,7 +19,7 @@ void print_linear_parameter(const struct parameter* param) {
 			param->solver_type, param->C, param->eps);
 }
 void print_adaboost_linear_parameter(const struct adaboost_linear_parameter* param) {
-	printf("[meta_parameter] max_iter %d\n", param->max_iter);
+	printf("[meta_parameter] max_iter %d sample_rate %g\n", param->max_iter, param->sample_rate);
 	print_linear_parameter(param->linear_param);
 }
 const char* check_adaboost_linear_input(const struct problem* prob, const struct adaboost_linear_parameter* param) {
@@ -26,6 +29,10 @@ const char* check_adaboost_linear_input(const struct problem* prob, const struct
 		return "n <= 0";
 	if (param->max_iter <= 0)
 		return "max_iter <= 0";
+	if (param->sample_rate <= 0.0)
+		return "sample_rate <= 0.0";
+	if (param->sample_rate>1.0 && param->sample_rate<DBL_MAX)
+		return "sample_rate > 1.0";
 	return NULL;
 }
 
@@ -63,8 +70,17 @@ double bag_predict_labels(const struct problem* prob, const double* alpha_bag, s
 
 void train_adaboost_linear(const struct problem* prob, const struct adaboost_linear_parameter* param, double** alpha_bag_ret, struct model*** linear_bag_ret, int* bag_size_ret) {
 	int max_iter = param->max_iter;
+	double sample_rate = param->sample_rate;
 	if (max_iter >= INT_MAX)
 		max_iter = (int)sqrt(prob->l);
+	if (sample_rate*prob->l < 1.0) {
+		sample_rate = 1.0;
+		fprintf(stderr, "WARNING: sample_size < 1. Set sample_rate to 1.0 (i.e. sample_size = #instances)\n");
+	}
+
+	int sample_size = (int)(sample_rate*prob->l);
+	if (sample_rate <= 1.0)
+		printf("[sample_size] %d/%d\n", sample_size,prob->l);
 
 	// init alpha_bag & model_bag
 	int i;
@@ -79,7 +95,18 @@ void train_adaboost_linear(const struct problem* prob, const struct adaboost_lin
 	double* pred_labels = Malloc(double, prob->l);
 	while (iter < max_iter) {
 		// train weak learner
-		struct model* weak_model = train(prob, param->linear_param);
+		struct model* weak_model = NULL;
+		if (sample_rate <= 1.0) {
+			//XXX with sampling
+			struct problem subprob;
+			random_sample(prob, sample_size, &subprob);
+			weak_model = train(&subprob, param->linear_param);
+			destroy_problem(&subprob);
+		}
+		else {
+			// without sampling
+			weak_model = train(prob, param->linear_param);
+		}
 
 		// estimate training error
 		double error = 0.0;
@@ -108,8 +135,8 @@ void train_adaboost_linear(const struct problem* prob, const struct adaboost_lin
 			prob->W[i] /= z;
 
 		//double train_error = bag_predict_labels(prob, alpha_bag, model_bag, iter+1, pred_labels);
-		//printf("[%d] error %lf score %lf alpha %lf train_error %lf\n", iter,error,score,alpha,train_error);
-		printf("[%d] error %lf score %lf alpha %lf\n", iter,error,score,alpha);
+		//printf("[%d] error %lf weight_factor %lf alpha %lf train_error %lf\n", iter,error,score,alpha,train_error);
+		printf("[%d] error %lf weight_factor %lf alpha %lf\n", iter,error,score,alpha);
 		iter++;
 	}
 	*alpha_bag_ret = alpha_bag;
@@ -154,14 +181,16 @@ void cross_validate_adaboost_linear(const struct problem* prob, const struct ada
 		for (j=0; j<start_index; ++j) {
 			subprob.x[k] = prob->x[perm[j]];
 			subprob.y[k] = prob->y[perm[j]];
-			subprob.W[k] = prob->W[perm[j]];
+			//subprob.W[k] = prob->W[perm[j]];
+			subprob.W[k] = 1.0/subprob.l;
 			//printf("y %g x->index %d x->value %g w %g\n", subprob.y[k],subprob.x[k]->index,subprob.x[k]->value,subprob.W[k]);
 			k++;
 		}
 		for (j=end_index; j<l; ++j) {
 			subprob.x[k] = prob->x[perm[j]];
 			subprob.y[k] = prob->y[perm[j]];
-			subprob.W[k] = prob->W[perm[j]];
+			//subprob.W[k] = prob->W[perm[j]];
+			subprob.W[k] = 1.0/subprob.l;
 			//printf("y %g x->index %d x->value %g w %g\n", subprob.y[k],subprob.x[k]->index,subprob.x[k]->value,subprob.W[k]);
 			k++;
 		}
@@ -171,7 +200,7 @@ void cross_validate_adaboost_linear(const struct problem* prob, const struct ada
 		double* alpha_bag;
 		struct model** linear_bag;
 		train_adaboost_linear(&subprob, param, &alpha_bag, &linear_bag, &bag_size);
- 
+
 		// test
 		double test_error = 0.0;
 		for (j=start_index; j<end_index; ++j) {
@@ -188,9 +217,10 @@ void cross_validate_adaboost_linear(const struct problem* prob, const struct ada
 		free(linear_bag);
 
 		// free training sub-problem
-		free(subprob.x);
-		free(subprob.y);
-		free(subprob.W);
+		//free(subprob.x);
+		//free(subprob.y);
+		//free(subprob.W);
+		destroy_problem(&subprob);
 	}
 	free(indices);
 	free(perm);

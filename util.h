@@ -27,4 +27,18 @@ void permute(int* perm, int len) {
 	}
 }
 
+void sample_without_replacement(int* perm, int len, int size) {
+	int i;
+	for (i=0; i<size; ++i) {
+		int j = i+rand()%(len-i);
+		swap(&perm[i], &perm[j]);
+	}
+}
+
+void sample_with_replacement(int* perm, int len, int size) {
+	int i;
+	for (i=0; i<size; ++i)
+		perm[i] = rand()%len;
+}
+
 #endif /* _UTIL_H */

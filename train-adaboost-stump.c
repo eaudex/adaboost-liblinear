@@ -55,7 +55,8 @@ int main(int argc, char** argv) {
 		for (i=0; i<prob_cls.l; ++i)
 			if (pred_labels[i] == prob_cls.prob.y[i])
 				correct ++;
-		printf("Cross Validation Accuracy %g%%\n", 100.0*correct/prob_cls.l);
+		double cv_error = 1.0-(double)correct/prob_cls.l;
+		printf("Cross Validation Error %g\n", cv_error);
 		free(pred_labels);
 	}
 	else {
@@ -72,8 +73,8 @@ int main(int argc, char** argv) {
 
 		// training error
 		double* pred_labels = Malloc(double,prob_cls.l);
-		double train_error = bag_predict_labels(&prob_cls.prob,stump_bag,bag_size,pred_labels);
-		printf("train_error %lf\n", train_error);
+		double train_error = bag_predict_labels(&prob_cls.prob, stump_bag, bag_size, pred_labels);
+		printf("Training Error %g\n", train_error);
 		free(pred_labels);
 
 		// test error
@@ -85,7 +86,7 @@ int main(int argc, char** argv) {
 
 			double* pred_labels = Malloc(double,test_prob_cls.l);
 			double test_error = bag_predict_labels(&test_prob_cls.prob,stump_bag,bag_size,pred_labels);
-			printf("test_error %lf\n", test_error);
+			printf("Test Error %g\n", test_error);
 
 			free(pred_labels);
 			destroy_problem_class(&test_prob_cls);

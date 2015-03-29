@@ -348,12 +348,14 @@ double find_best_stump(const struct problem* prob_col, struct stump* stump_, int
 	else {
 		// stochastic: random subspace
 		int* indices = Malloc(int,w_size);
-		for (j=0; j<w_size; ++j)
-			indices[j] = j;
+		for(j=0;j<w_size;++j) indices[j]=j;
+		sample_without_replacement(indices, w_size, random_subspace);
+		/*
 		for (j=0; j<random_subspace; ++j) {
 			int jj = j + rand()%(w_size-j);
 			swap(&indices[j], &indices[jj]);
 		}
+		*/
 		for (j=0; j<random_subspace; ++j) {
 			//int rand_j = rand()%w_size;
 			int rand_j = indices[j];
@@ -384,7 +386,7 @@ void train_adaboost_stump(const struct problem_class* prob_cls, const struct ada
 		random_subspace = prob_cls->n;
 	else if (random_subspace >= prob_cls->n) {
 		random_subspace = prob_cls->n;
-		fprintf(stderr, "WARNING: dim(random_subspace) >= n. Set dim(random_space) to n instead (i.e. deterministic mode)\n");
+		fprintf(stderr, "WARNING: dim(random_subspace) >= #features. Set dim(random_space) to #features (i.e. deterministic mode)\n");
 	}
 
 	// transform data to compressed column format
@@ -419,8 +421,8 @@ void train_adaboost_stump(const struct problem_class* prob_cls, const struct ada
 			prob_col->W[i] /= z;
 
 		//double train_error = bag_predict_labels0(prob_col,stumps,iter+1,pred_labels);
-		//printf("[%d] error %lf score %lf alpha %lf train_error %lf\n", iter,error,score,alpha,train_error);
-		printf("[%d] error %lf score %lf alpha %lf\n", iter,error,score,alpha);
+		//printf("[%d] error %lf weight_factor %lf alpha %lf train_error %lf\n", iter,error,score,alpha,train_error);
+		printf("[%d] error %lf weight_factor %lf alpha %lf\n", iter,error,score,alpha);
 		iter ++;
 	}
 	*stump_bag_ret = stumps;
@@ -472,14 +474,16 @@ void cross_validate_adaboost_stump(const struct problem_class* prob_cls, const s
 		for (j=0; j<start_index; ++j) {
 			subprob_cls.prob.x[k] = prob_cls->prob.x[perm[j]];
 			subprob_cls.prob.y[k] = prob_cls->prob.y[perm[j]];
-			subprob_cls.prob.W[k] = prob_cls->prob.W[perm[j]];
+			//subprob_cls.prob.W[k] = prob_cls->prob.W[perm[j]];
+			subprob_cls.prob.W[k] = 1.0/subprob_cls.l;
 			//printf("y %g x->index %d x->value %g w %g\n", subprob_cls.prob.y[k],subprob_cls.prob.x[k]->index,subprob_cls.prob.x[k]->value,subprob_cls.prob.W[k]);
 			k++;
 		}
 		for (j=end_index; j<l; ++j) {
 			subprob_cls.prob.x[k] = prob_cls->prob.x[perm[j]];
 			subprob_cls.prob.y[k] = prob_cls->prob.y[perm[j]];
-			subprob_cls.prob.W[k] = prob_cls->prob.W[perm[j]];
+			//subprob_cls.prob.W[k] = prob_cls->prob.W[perm[j]];
+			subprob_cls.prob.W[k] = 1.0/subprob_cls.l;
 			//printf("y %g x->index %d x->value %g w %g\n", subprob_cls.prob.y[k],subprob_cls.prob.x[k]->index,subprob_cls.prob.x[k]->value,subprob_cls.prob.W[k]);
 			k++;
 		}
@@ -506,9 +510,10 @@ void cross_validate_adaboost_stump(const struct problem_class* prob_cls, const s
 		free(stump_bag);
 
 		// free training sub-problem
-		free(subprob_cls.prob.x);
-		free(subprob_cls.prob.y);
-		free(subprob_cls.prob.W);
+		//free(subprob_cls.prob.x);
+		//free(subprob_cls.prob.y);
+		//free(subprob_cls.prob.W);
+		destroy_problem_class(&subprob_cls);
 	}
 	free(indices);
 	free(perm);

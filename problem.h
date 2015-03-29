@@ -25,10 +25,10 @@ static void exit_input_error(int line_num)
 	exit(1);
 }
 
-static char *line = NULL;
+static char* line = NULL;
 static int max_line_len;
 
-static char* readline(FILE *input)
+static char* readline(FILE* input)
 {
 	int len;
 
@@ -47,7 +47,7 @@ static char* readline(FILE *input)
 }
 
 // read in a problem (in libsvm format)
-int read_problem(const char *filename, struct feature_node** x_space_ret, struct problem* prob, double bias)
+int read_problem(const char* filename, struct feature_node** x_space_ret, struct problem* prob, double bias)
 {
 	int max_index, inst_max_index, i;
 	long int elements, j;
@@ -217,6 +217,7 @@ void transpose_problem(const struct problem* prob, struct feature_node** x_space
 	free(col_ptr);
 }
 
+
 // read in a problem class (in libsvm format)
 void read_problem_class(const char* filename, struct problem_class* prob_cls, double bias)
 {
@@ -234,11 +235,51 @@ void transpose_problem_class(const struct problem_class* prob_cls, struct proble
 	prob_cls_col->space_size = prob_cls->space_size;
 }
 
-void destroy_problem_class(struct problem_class* prob_cls) {
-	free(prob_cls->prob.y);
-	free(prob_cls->prob.x);
-	free(prob_cls->prob.W);
+
+void destroy_problem(struct problem* const prob) {
+	free(prob->y);
+	free(prob->x);
+	free(prob->W);
+}
+void destroy_problem_class(struct problem_class* const prob_cls) {
+	//free(prob_cls->prob.y);
+	//free(prob_cls->prob.x);
+	//free(prob_cls->prob.W);
+	destroy_problem(&prob_cls->prob);
 	free(prob_cls->x_space);
 }
+
+
+// without replacement
+void random_sample(const struct problem* prob, int size, struct problem* subprob) {
+	const int l = prob->l;
+	if (size > l) {
+		size = l;
+		fprintf(stderr, "WARNING: sample_size > #instances. Set sample_size to #instances.\n");
+	}
+
+	int i;
+	int* perm = Malloc(int, l);
+	//for(i=0;i<l;++i) perm[i]=i;
+	//sample_without_replacement(perm,l, size);
+	sample_with_replacement(perm,l, size);
+
+	subprob->l = size;
+	subprob->n = prob->n;
+	subprob->bias = prob->bias;
+	subprob->x = Malloc(struct feature_node*, subprob->l);
+	subprob->y = Malloc(double, subprob->l);
+	subprob->W = Malloc(double, subprob->l);
+
+	int k = 0;
+	for (i=0; i<size; ++i) {
+		subprob->x[k] = prob->x[perm[i]];
+		subprob->y[k] = prob->y[perm[i]];
+		subprob->W[k] = prob->W[perm[i]];
+		k++;
+	}
+	free(perm);
+}
+
 
 #endif /* _PROBLEM_H */
