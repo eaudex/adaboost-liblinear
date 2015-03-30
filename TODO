@@ -12,8 +12,10 @@ Write adaboost model wrapper:
 	- class_labels
 
 Support multi-class AdaBoost
-	- One-versus-rest multi-class wrapper of AdaBoost-Stump
-	- Samme: Multi-class AdaBoost (http://web.stanford.edu/~hastie/Papers/samme.pdf)
+	- SAMME: Multi-class AdaBoost (http://web.stanford.edu/~hastie/Papers/samme.pdf)
+	- One-versus-rest multi-class wrapper of AdaBoost-Stump ?
+	- AdaBoost.MH ?
 
 Move adaboost-related functions from stump.h to adaboost-stump.h
+Bootstrap-LIBLINEAR
 

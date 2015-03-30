@@ -386,7 +386,7 @@ void train_adaboost_stump(const struct problem_class* prob_cls, const struct ada
 		random_subspace = prob_cls->n;
 	else if (random_subspace >= prob_cls->n) {
 		random_subspace = prob_cls->n;
-		fprintf(stderr, "WARNING: dim(random_subspace) >= #features. Set dim(random_space) to #features (i.e. deterministic mode)\n");
+		fprintf(stderr, "WARNING: dim(random_subspace) >= #features. Set dim(random_space) to #features (i.e. entire feature space)\n");
 	}
 
 	// transform data to compressed column format

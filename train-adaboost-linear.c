@@ -20,7 +20,7 @@ void exit_with_help()
 	printf(
 	"Usage: train-adaboost-linear [options] training_set_file [model_file]\n"
 	"options: (currently, it only supports binary classification)\n"
-	"-i iter: maximum number of AdaBoost iterations (default sqrt(l)), where l denotes #training instances\n"
+	"-i iter: maximum number of AdaBoost iterations (default sqrt(#instances))\n"
 	"-r rate: sample rate of training data per AdaBoost iteration in (0.0,1.0] (default no sampling)\n"
 	"-s type : set type of solver (default 1)\n"
 	"  for multi-class classification\n"

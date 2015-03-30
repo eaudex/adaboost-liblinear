@@ -16,8 +16,8 @@ int quiet = 0;
 void exit_with_help() {
 	printf("Usage: train-adaboost-stump [options] train_file_name [model_file_name]\n"
 		"options: (currently, it only supports binary classification)\n"
-		"-i iter: maximum number of iterations (default sqrt(l)), where l denotes #training instances\n"
-		"-d dimension: dimensions of random subspace; (default n, deterministic mode), where n denotes #features\n"
+		"-i iter: maximum number of iterations (default sqrt(#instances))\n"
+		"-d dimension: dimensions of random subspace; (default #features, i.e. entire feature space)\n"
 		"-t test_file_name: testing data after training\n"
 		"-v n: n-fold cross validation mode\n"
 		"-q: quiet mode\n"
