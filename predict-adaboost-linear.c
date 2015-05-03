@@ -20,24 +20,22 @@ int main(int argc, char** argv) {
 	parse_command_line(argc, argv, test_file_name, model_file_name, output_file_name);
 
 	// load models
-	double* alpha_bag = NULL;
-	struct model** linear_bag = NULL;
-	int bag_size = 0;
-	if (load_bag_linears(model_file_name,&alpha_bag,&linear_bag,&bag_size) == -1) {
+	struct adaboost_linear_model adamodel;
+	if (load_adaboost_linear_model(model_file_name,&adamodel) == -1) {
 		fprintf(stderr, "can't load model file %s\n", model_file_name);
 		exit(1);
 	}
 
 	// read problem
 	double bias = -1.0;
-	if (linear_bag[0]->bias >= 0.0)
-		bias = linear_bag[0]->bias;
+	if (adamodel.model_bag[0]->bias >= 0.0)
+		bias = adamodel.model_bag[0]->bias;
 	struct problem_class prob_cls;
 	read_problem_class(test_file_name, &prob_cls, bias);
-	//print_problem_stats(&prob_cls);
+	print_problem_stats(&prob_cls);
 
 	double* pred_labels = Malloc(double, prob_cls.l);
-	double test_error = bag_predict_labels(&prob_cls.prob, alpha_bag, linear_bag, bag_size, pred_labels);
+	double test_error = predict_adaboost_linear(&prob_cls.prob, &adamodel, pred_labels);
 	printf("test_error %lf\n", test_error);
 
 	FILE* fp = fopen(output_file_name,"w");
@@ -54,11 +52,8 @@ int main(int argc, char** argv) {
 	// free problem
 	destroy_problem_class(&prob_cls);
 
-	// free models
-	for (i=0; i<bag_size; ++i)
-		free_and_destroy_model(&linear_bag[i]);
-	free(alpha_bag);
-	free(linear_bag);
+	// free model
+	destroy_adaboost_linear_model(&adamodel);
 
 	return 0;
 }

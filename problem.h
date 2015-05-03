@@ -6,17 +6,27 @@
 #include <ctype.h>
 #include <errno.h>
 #include <string.h>
+#include <math.h>
 #include "util.h"
 #include "linear.h"
 
+// l: #instances
+// n: #features
+// k: #classes, k=0 if labels are real-valued
 struct problem_class {
-	int l, n;
+	int l, n, k;
 	int space_size;
 	struct problem prob;
 	struct feature_node* x_space;
+	double* y_space;	//not used if y is real-valued (regression problem)
 };
 void print_problem_stats(const struct problem_class* prob_cls) {
-	printf("[problem] l %d n %d |xspace| %d bias %g\n", prob_cls->l, prob_cls->n, prob_cls->space_size, prob_cls->prob.bias);
+	printf("[problem] l %d n %d k %d |xspace| %d bias %g\n", prob_cls->l, prob_cls->n, prob_cls->k, prob_cls->space_size, prob_cls->prob.bias);
+	int i;
+	printf("[labels]");
+	for (i=0; i<prob_cls->k; ++i)
+		printf(" %g", prob_cls->y_space[i]);
+	printf("\n");
 }
 
 static void exit_input_error(int line_num)
@@ -225,16 +235,53 @@ void read_problem_class(const char* filename, struct problem_class* prob_cls, do
 	prob_cls->l = prob_cls->prob.l;
 	prob_cls->n = prob_cls->prob.n;
 	prob_cls->space_size = space_size;
+
+	int i, j;
+	double y, yint;
+	int* labs = Malloc(int,prob_cls->l);
+	for (i=0; i<prob_cls->l; ++i) {
+		y = prob_cls->prob.y[i];
+		if (modf(y,&yint) != 0.0) {
+			prob_cls->k = 0;
+			prob_cls->y_space = NULL;
+			break;
+		}
+		else {
+			labs[i] = (int)yint;
+		}
+	}
+	if (i >= prob_cls->l) {
+		qsort((void*)labs, prob_cls->l, sizeof(int), cmp_int);
+		prob_cls->k = unique(labs, prob_cls->l);
+		prob_cls->y_space = Malloc(double, prob_cls->k);
+		prob_cls->y_space[0] = (double)labs[0];
+		int c = 1;
+		for (i=1; i<prob_cls->l&&c<prob_cls->k; ++i) {
+			if (labs[i] != labs[i-1]) {
+				prob_cls->y_space[c] = (double)labs[i];
+				c += 1;
+			}
+		}
+	}
+
+	free(labs);
 }
 
 // transpose matrix X from row format to column format
 void transpose_problem_class(const struct problem_class* prob_cls, struct problem_class* prob_cls_col) {
 	transpose_problem(&prob_cls->prob, &prob_cls_col->x_space, &prob_cls_col->prob);
-	prob_cls_col->l = prob_cls->prob.l;
-	prob_cls_col->n = prob_cls->prob.n;
+	prob_cls_col->l = prob_cls->l;
+	prob_cls_col->n = prob_cls->n;
+	prob_cls_col->k = prob_cls->k;
 	prob_cls_col->space_size = prob_cls->space_size;
+	prob_cls_col->y_space = prob_cls->y_space;
 }
 
+void init_instance_weight(struct problem_class* const prob_cls) {
+	int i;
+	for(i=0; i<prob_cls->l; ++i)
+		prob_cls->prob.W[i] = 1.0/prob_cls->l;
+}
 
 void destroy_problem(struct problem* const prob) {
 	free(prob->y);
@@ -247,6 +294,7 @@ void destroy_problem_class(struct problem_class* const prob_cls) {
 	//free(prob_cls->prob.W);
 	destroy_problem(&prob_cls->prob);
 	free(prob_cls->x_space);
+	free(prob_cls->y_space);
 }
 
 

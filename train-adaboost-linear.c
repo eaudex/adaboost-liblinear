@@ -20,9 +20,13 @@ void exit_with_help()
 	printf(
 	"Usage: train-adaboost-linear [options] training_set_file [model_file]\n"
 	"options: (currently, it only supports binary classification)\n"
-	"-i iter: maximum number of AdaBoost iterations (default sqrt(#instances))\n"
-	"-r rate: sample rate of training data per AdaBoost iteration in (0.0,1.0] (default no sampling)\n"
-	"-s type : set type of solver (default 1)\n"
+	"-a type : set type of AdaBoost solver (default 0)\n"
+	"	 0 -- AdaBoost (binary)\n"
+	"	 1 -- AdaBoost SAMME (multi-class)\n"
+	"	 2 -- AdaBoost with one-against-all (OAA) decomposition (multi-class)\n"
+	"-i iter : maximum number of AdaBoost iterations (default sqrt(#instances))\n"
+	//"-r rate : sample rate of training data per AdaBoost iteration in (0.0,1.0] (default no sampling)\n"
+	"-s type : set type of base solver (default 1)\n"
 	"  for multi-class classification\n"
 	"	 0 -- L2-regularized logistic regression (primal)\n"
 	"	 1 -- L2-regularized L2-loss support vector classification (dual)\n"
@@ -54,8 +58,8 @@ void exit_with_help()
 	"		|f'(alpha)|_1 <= eps |f'(alpha0)|,\n"
 	"		where f is the dual function (default 0.1)\n"
 	"-B bias : if bias >= 0, instance x becomes [x; bias]; if < 0, no bias term added (default -1)\n"
-	"-wi weight: weights adjust the parameter C of different classes (see README for details)\n"
-	"-v n: n-fold cross validation mode\n"
+	"-wi weight : weights adjust the parameter C of different classes (see README for details)\n"
+	"-v n : n-fold cross validation mode\n"
 	"-q : quiet mode (no outputs)\n"
 //	"-W instace_weight_file: initialize instance weights, (default 1.0/[#training instances])\n"
 	);
@@ -67,12 +71,13 @@ void parse_command_line(int argc, char **argv, char *input_file_name, char *mode
 //void read_problem(const char *filename);
 //void do_cross_validation();
 
+struct problem_class prob_cls;
 struct adaboost_linear_parameter adaparam;
-struct feature_node *x_space;
+struct adaboost_linear_model adamodel;
+//struct feature_node *x_space;
 struct parameter param;
-struct problem prob;
-struct model* model_;
-char *weight_file;
+//struct model* model_;
+char* weight_file;
 int flag_cross_validation;
 int nr_fold;
 double bias;
@@ -84,71 +89,67 @@ int main(int argc, char **argv)
 	const char* error_msg;
 
 	parse_command_line(argc, argv, input_file_name, model_file_name);
+	read_problem_class(input_file_name, &prob_cls, bias);
+
+	error_msg = check_parameter(&prob_cls.prob,&param);
+	if(error_msg)
+	{
+		fprintf(stderr,"ERROR: %s\n",error_msg);
+		exit(1);
+	}
+
+	error_msg = check_adaboost_linear_input(&prob_cls,&adaparam);
+	if(error_msg)
+	{
+		fprintf(stderr,"ERROR: %s\n",error_msg);
+		exit(1);
+	}
+
 	print_adaboost_linear_parameter(&adaparam);
-	//read_problem(input_file_name);
-	read_problem(input_file_name, &x_space, &prob, bias);
+	print_problem_stats(&prob_cls);
 
-	error_msg = check_parameter(&prob,&param);
-	if(error_msg)
+	if(flag_cross_validation==1)
 	{
-		fprintf(stderr,"ERROR: %s\n",error_msg);
-		exit(1);
-	}
-
-	error_msg = check_adaboost_linear_input(&prob,&adaparam);
-	if(error_msg)
-	{
-		fprintf(stderr,"ERROR: %s\n",error_msg);
-		exit(1);
-	}
-
-	if(flag_cross_validation)
-	{
-		double* pred_labels = Malloc(double,prob.l);
-		cross_validate_adaboost_linear(&prob, &adaparam, nr_fold, pred_labels);
+		double* pred_labels = Malloc(double,prob_cls.l);
+		cross_validate_adaboost_linear(&prob_cls, &adaparam, nr_fold, pred_labels);
 		int i, correct=0;
-		for (i=0; i<prob.l; ++i)
-			if (pred_labels[i] == prob.y[i])
+		for (i=0; i<prob_cls.l; ++i)
+			if (pred_labels[i] == prob_cls.prob.y[i])
 				correct ++;
-		double cv_error = 1.0-(double)correct/prob.l;
+		double cv_error = 1.0-(double)correct/prob_cls.l;
 		printf("Cross Validation Error %g\n", cv_error);
 		free(pred_labels);
 	}
 	else
 	{
 		// train models
-		double* alpha_bag = NULL;
-		struct model** linear_bag = NULL;
-		int bag_size = 0;
-		train_adaboost_linear(&prob, &adaparam, &alpha_bag, &linear_bag, &bag_size);
+		train_adaboost_linear(&prob_cls, &adaparam, &adamodel);
 
 		// save models
-		if (save_bag_linears(model_file_name,alpha_bag,linear_bag,bag_size))
+		if (save_adaboost_linear_model(model_file_name,&adamodel))
 		{
 			fprintf(stderr, "can't save model to file %s\n", model_file_name);
 			exit(1);
 		}
 
 		// training error
-		double* pred_labels = Malloc(double,prob.l);
-		double train_error = bag_predict_labels(&prob, alpha_bag, linear_bag, bag_size, pred_labels);
+		double* pred_labels = Malloc(double,prob_cls.l);
+		double train_error = predict_adaboost_linear(&prob_cls.prob, &adamodel, pred_labels);
 		printf("Training Error %g\n", train_error);
 		free(pred_labels);
 
-		// free models
-		int i;
-		for (i=0; i<bag_size; ++i)
-			free_and_destroy_model(&linear_bag[i]);
-		free(alpha_bag);
-		free(linear_bag);
+		// free model
+		destroy_adaboost_linear_model(&adamodel);
 	}
+
 	destroy_param(&param);
-	destroy_problem(&prob);
-	free(x_space);
+	destroy_problem_class(&prob_cls);
+	//free(x_space);
 
 	return 0;
 }
 
+/*
 void do_cross_validation()
 {
 	int i;
@@ -189,12 +190,14 @@ void do_cross_validation()
 
 	free(target);
 }
+*/
 
 void parse_command_line(int argc, char **argv, char *input_file_name, char *model_file_name)
 {
 	int i;
 	void (*print_func)(const char*) = NULL;	// default printing to stdout
 
+	adaparam.solver_type = ADABOOST;
 	adaparam.max_iter = INT_MAX;
 	adaparam.sample_rate = DBL_MAX;
 	adaparam.linear_param = &param;
@@ -266,6 +269,10 @@ void parse_command_line(int argc, char **argv, char *input_file_name, char *mode
 				weight_file = argv[i];
 				break;
 
+			case 'a':
+				adaparam.solver_type = atoi(argv[i]);
+				break;
+
 			case 'i':
 				adaparam.max_iter = atoi(argv[i]);
 				break;
@@ -301,12 +308,14 @@ void parse_command_line(int argc, char **argv, char *input_file_name, char *mode
 		sprintf(model_file_name,"%s.adamodel",p);
 	}
 
-	// check if model file exists
-	struct stat s = {0};
-	if (stat(model_file_name,&s) == 0) {
-		fprintf(stderr, "Model file exists: %s\n", model_file_name);
-		fprintf(stderr, "Please rename [model_file_name]\n");
-		exit(1);
+	// make sure model file does not exist in training mode
+	if (flag_cross_validation == 0) {
+		struct stat s = {0};
+		if (stat(model_file_name,&s) == 0) {
+			fprintf(stderr, "Model file exists: %s\n", model_file_name);
+			fprintf(stderr, "Please rename [model_file_name]\n");
+			exit(1);
+		}
 	}
 
 	if(param.eps == INF)

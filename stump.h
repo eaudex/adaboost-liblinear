@@ -314,7 +314,7 @@ double find_stump0(const struct problem* prob_col, int feature_index, double sum
 }
 
 double find_best_stump(const struct problem* prob_col, struct stump* stump_, int random_subspace) {
-	const int l_size = prob_col->l;
+	//const int l_size = prob_col->l;
 	const int w_size = prob_col->n;
 
 	int i;
@@ -500,8 +500,6 @@ void cross_validate_adaboost_stump(const struct problem_class* prob_cls, const s
 			if (target_labels[perm[j]] != prob_cls->prob.y[perm[j]])
 				test_error += 1.0;
 		}
-		//test_error /= fold_size;
-		//printf("error %g\n", test_error);
 		printf("[fold-%d] (%d-%d) error %g (%d/%d)\n", i,start_index,end_index, test_error/fold_size, (int)test_error,fold_size);
 
 		// free models
@@ -558,32 +556,5 @@ struct tree_node* build_decision_tree(const struct problem_class* prob_class_col
 	return node;
 }
 */
-
-////////////////////////////////////////
-int gpartition(int* indices, const double* values, int start_index, int end_index) {
-	int length = end_index-start_index+1;
-	int pidx = start_index + rand()%length;
-	double pval = values[indices[pidx]];
-	swap(&indices[pidx], &indices[end_index]);
-
-	int i, j=start_index;
-	for (i=start_index; i<end_index; ++i) {
-		if (values[indices[i]] < pval) {
-			swap(&indices[i], &indices[j]);
-			j++;
-		}
-	}
-
-	swap(&indices[j], &indices[end_index]);
-	return j;
-}
-
-void gsort(int* indices, const double* values, int start_index, int end_index) {
-	if (start_index >= end_index)
-		return;
-	int pidx = gpartition(indices, values, start_index, end_index);
-	gsort(indices, values, start_index, pidx-1);
-	gsort(indices, values, pidx+1, end_index);
-}
 
 #endif /* _STUMP_H */

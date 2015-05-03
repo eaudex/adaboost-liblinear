@@ -4,18 +4,20 @@ X Write train-adaboost-linear code as a function in adaboost-linear.h
 X Implement load-adaboost-linears in adaboost-linear.h
 X Implement predict-adaboost-linear.c & predict-adaboost-stump.c
 X Implement cross validation functionality
-
-Write adaboost model wrapper:
+X Support multi-class AdaBoost
+	- SAMME: Multi-class AdaBoost (http://web.stanford.edu/~hastie/Papers/samme.pdf)
+	- One-versus-rest multi-class wrapper of AdaBoost-Linear/Stump
+X Write adaboost model wrapper:
 	- bag_size
 	- alpha_bag
 	- model_bag
 	- class_labels
 
-Support multi-class AdaBoost
-	- SAMME: Multi-class AdaBoost (http://web.stanford.edu/~hastie/Papers/samme.pdf)
-	- One-versus-rest multi-class wrapper of AdaBoost-Stump ?
-	- AdaBoost.MH ?
+Diagnostics Tools:
+Support hypothesis selection and graphics output (GNUPLOT)
+Support parameter selection and graphics output (GNUPLOT)
+Support to draw learning curves (training/test-error versus data-size)
 
+Bagging-LIBLINEAR
 Move adaboost-related functions from stump.h to adaboost-stump.h
-Bootstrap-LIBLINEAR
 
