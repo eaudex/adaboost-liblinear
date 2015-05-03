@@ -42,43 +42,46 @@ AdaBoost-Linear
 $ ./train-adaboost-linear
 Usage: train-adaboost-linear [options] training_set_file [model_file]
 options: (currently, it only supports binary classification)
--i iter: maximum number of iterations (default sqrt(l)), where l denotes #training instances
--s type : set type of solver (default 1)
+-a type : set type of AdaBoost solver (default 0)
+	 0 -- AdaBoost (binary)
+	 1 -- AdaBoost SAMME (multi-class)
+	 2 -- AdaBoost with one-against-all (OAA) decomposition (multi-class)
+-i iter : maximum number of AdaBoost iterations (default sqrt(#instances))
+-s type : set type of base solver (default 1)
   for multi-class classification
-         0 -- L2-regularized logistic regression (primal)
-         1 -- L2-regularized L2-loss support vector classification (dual)
-         2 -- L2-regularized L2-loss support vector classification (primal)
-         3 -- L2-regularized L1-loss support vector classification (dual)
-         4 -- support vector classification by Crammer and Singer
-         5 -- L1-regularized L2-loss support vector classification
-         6 -- L1-regularized logistic regression
-         7 -- L2-regularized logistic regression (dual)
+	 0 -- L2-regularized logistic regression (primal)
+	 1 -- L2-regularized L2-loss support vector classification (dual)
+	 2 -- L2-regularized L2-loss support vector classification (primal)
+	 3 -- L2-regularized L1-loss support vector classification (dual)
+	 4 -- support vector classification by Crammer and Singer
+	 5 -- L1-regularized L2-loss support vector classification
+	 6 -- L1-regularized logistic regression
+	 7 -- L2-regularized logistic regression (dual)
   for regression
-        11 -- L2-regularized L2-loss support vector regression (primal)
-        12 -- L2-regularized L2-loss support vector regression (dual)
-        13 -- L2-regularized L1-loss support vector regression (dual)
+	11 -- L2-regularized L2-loss support vector regression (primal)
+	12 -- L2-regularized L2-loss support vector regression (dual)
+	13 -- L2-regularized L1-loss support vector regression (dual)
 -c cost : set the parameter C (default 1)
 -p epsilon : set the epsilon in loss function of SVR (default 0.1)
 -e epsilon : set tolerance of termination criterion
-        -s 0 and 2
-                |f'(w)|_2 <= eps*min(pos,neg)/l*|f'(w0)|_2,
-                where f is the primal function and pos/neg are # of
-                positive/negative data (default 0.01)
-        -s 11
-                |f'(w)|_2 <= eps*|f'(w0)|_2 (default 0.001)
-        -s 1, 3, 4, and 7
-                Dual maximal violation <= eps; similar to libsvm (default 0.1)
-        -s 5 and 6
-                |f'(w)|_1 <= eps*min(pos,neg)/l*|f'(w0)|_1,
-                where f is the primal function (default 0.01)
-        -s 12 and 13
-                |f'(alpha)|_1 <= eps |f'(alpha0)|,
-                where f is the dual function (default 0.1)
+	-s 0 and 2
+		|f'(w)|_2 <= eps*min(pos,neg)/l*|f'(w0)|_2,
+		where f is the primal function and pos/neg are # of
+		positive/negative data (default 0.01)
+	-s 11
+		|f'(w)|_2 <= eps*|f'(w0)|_2 (default 0.001)
+	-s 1, 3, 4, and 7
+		Dual maximal violation <= eps; similar to libsvm (default 0.1)
+	-s 5 and 6
+		|f'(w)|_1 <= eps*min(pos,neg)/l*|f'(w0)|_1,
+		where f is the primal function (default 0.01)
+	-s 12 and 13
+		|f'(alpha)|_1 <= eps |f'(alpha0)|,
+		where f is the dual function (default 0.1)
 -B bias : if bias >= 0, instance x becomes [x; bias]; if < 0, no bias term added (default -1)
--wi weight: weights adjust the parameter C of different classes (see README for details)
--v n: n-fold cross validation mode
+-wi weight : weights adjust the parameter C of different classes (see README for details)
+-v n : n-fold cross validation mode
 -q : quiet mode (no outputs)
--W instace_weight_file: initialize instance weights, (default 1.0/[#training instances])
 
 [Prediction]
 $ ./predict-adaboost-linear 
